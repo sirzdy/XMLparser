@@ -5,6 +5,9 @@ import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -13,6 +16,8 @@ import java.util.List;
 
 public class Parser {
     private Element root=null;
+    private List<TagAndName> tagAndNameList=new ArrayList<TagAndName>();
+
     Parser(String file) throws DocumentException {
         SAXReader sax = new SAXReader();//创建一个SAXReader对象
         File xmlFile = new File(file);//根据指定的路径创建file对象
@@ -39,39 +44,48 @@ public class Parser {
             this.getNodes(e);//递归
         }
     }
-    public void getTagAndName(Element node,int type){
+    public void getTagAndName(Element node){
         List<Attribute> listAttr=node.attributes();//当前节点的所有属性的list
-        boolean sign=false;//sign为true时含有name属性
-        String name=null;
-        String value=null;
         for(Attribute attr:listAttr){//遍历当前节点的所有属性
             if (attr.getName().equals("name")){
-                sign=true;
-                value=attr.getValue();//属性的值
+                TagAndName tagAndName=new TagAndName(node.getName(),attr.getValue());//第一个参数是tag，第二个参数是name
+                tagAndNameList.add(tagAndName);
             }
         }
-        if (sign==true){
-            //System.out.println(node.getName());
-            //System.out.println(value);
-
-            //COptionUI* m_pPiliang;
-            if (type==0)
-                System.out.println("C"+node.getName()+"UI* "+"m_p"+captureName(value)+";");
-
-            //m_pPiliang(NULL),
-            if (type==1)
-                System.out.println("m_p"+captureName(value)+"(NULL),");
-
-            //m_pPiliang = static_cast<COptionUI*>(m_PaintManager.FindControl(_T("piliang")));
-            if (type==2)
-                System.out.println("m_p"+captureName(value)+" = static_cast<C"+node.getName()+"UI*>(m_PaintManager.FindControl(_T(\""+value+"\")));");
-        }
-
         //递归遍历当前节点所有的子节点
         List<Element> listElement=node.elements();//所有一级子节点的list
         for(Element e:listElement){//遍历所有一级子节点
-            this.getTagAndName(e,type);//递归
+            this.getTagAndName(e);//递归
         }
+    }
+    public void sortTag(){
+        Collections.sort(tagAndNameList);
+    }
+    public void buildResult(int type){
+        if (type==0){
+            for(TagAndName tagAndName : tagAndNameList){
+                System.out.println(tagAndName.getTag()+":"+tagAndName.getName());
+            }
+        }
+        //COptionUI* m_pPiliang;
+        if (type==1){
+            for(TagAndName tagAndName : tagAndNameList){
+                System.out.println("C"+tagAndName.getTag()+"UI* "+"m_p"+captureName(tagAndName.getName())+";");
+            }
+        }
+        //m_pPiliang(NULL),
+        if (type==2){
+            for(TagAndName tagAndName : tagAndNameList){
+                System.out.println("m_p"+captureName(tagAndName.getName())+"(NULL),");
+            }
+        }
+        //m_pPiliang = static_cast<COptionUI*>(m_PaintManager.FindControl(_T("piliang")));
+        if (type==3){
+            for(TagAndName tagAndName : tagAndNameList){
+                System.out.println("m_p"+captureName(tagAndName.getName())+" = static_cast<C"+tagAndName.getTag()+"UI*>(m_PaintManager.FindControl(_T(\""+tagAndName.getName()+"\")));");
+            }
+        }
+
     }
     public static String captureName(String name) {
         name = name.substring(0, 1).toUpperCase() + name.substring(1);
